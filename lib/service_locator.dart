@@ -1,3 +1,11 @@
+import 'package:connect/features/discover/data/datasources/discover_remote_datasource.dart';
+import 'package:connect/features/discover/data/repositories/discover_repository_impl.dart';
+import 'package:connect/features/discover/domain/repositories/i_discover_repository.dart';
+import 'package:connect/features/discover/domain/usecases/block_user_usecase.dart';
+import 'package:connect/features/discover/domain/usecases/get_blocked_users_usecase.dart';
+import 'package:connect/features/discover/domain/usecases/get_public_key_usecase.dart';
+import 'package:connect/features/discover/domain/usecases/search_users_usecase.dart';
+import 'package:connect/features/discover/domain/usecases/unblock_user_usecase.dart';
 import 'package:connect/features/profile/domain/usecases/update_profile_usecase.dart';
 import 'package:get_it/get_it.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -14,6 +22,7 @@ import 'package:connect/features/auth/presentation/bloc/auth_bloc.dart';
 
 import 'core/crypto/crypto_service.dart';
 import 'features/auth/domain/usecases/mark_profile_complete_usecase.dart';
+import 'features/discover/presentation/bloc/discover_bloc.dart';
 import 'features/profile/Data/datasources/profile_remote_datasource.dart';
 import 'features/profile/Data/repositories/profile_repository_impl.dart';
 import 'features/profile/domain/repositories/i_profile_repository.dart';
@@ -60,6 +69,10 @@ Future<void> initDependencies() async {
     () => ProfileRemoteDatasourceImpl(apiClient: sl()),
   );
 
+  sl.registerLazySingleton<IDiscoverRemoteDatasource>(
+      () => DiscoverRemoteDatasourceImpl(apiClient: sl()),
+  );
+
   // ===========================================================================
   // 3. REPOSITORIES
   // ===========================================================================
@@ -72,6 +85,10 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton<IProfileRepository>(
     () => ProfileRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  sl.registerLazySingleton<IDiscoverRepository>(
+        () => DiscoverRepositoryImpl(remoteDatasource: sl()),
   );
 
   // ===========================================================================
@@ -90,6 +107,13 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => MarkProfileCompleteUseCase(repository: sl()));
   sl.registerLazySingleton(() => GetMyProfileUseCase(repository: sl()));
   sl.registerLazySingleton(() => UpdateProfileUseCase(repository: sl()));
+  //Discover
+  sl.registerLazySingleton(() => SearchUsersUseCase(repository: sl()));
+  sl.registerLazySingleton(() => GetPublicKeyUseCase(repository: sl()));
+  sl.registerLazySingleton(() => BlockUserUseCase(repository: sl()));
+  sl.registerLazySingleton(() => UnblockUserUseCase(repository: sl()));
+  sl.registerLazySingleton(() => GetBlockedUsersUseCase(repository: sl()));
+
 
   // ===========================================================================
   // 5. BLOCS
@@ -113,6 +137,16 @@ Future<void> initDependencies() async {
       markProfileCompleteUseCase: sl(),
       getMyProfileUseCase: sl(),
       updateProfileUseCase: sl(),
+    ),
+  );
+
+  //Discover
+  sl.registerFactory(
+        () => DiscoverBloc(
+      searchUsersUseCase: sl(),
+      blockUserUseCase: sl(),
+      unblockUserUseCase: sl(),
+      getBlockedUsersUseCase: sl(),
     ),
   );
 }

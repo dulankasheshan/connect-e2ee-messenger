@@ -17,7 +17,7 @@ class UserProfileModel extends UserProfileEntity {
       email: json['email'] as String,
       username: json['username'] as String,
       name: json['name'] as String,
-      profilePicUrl: json['profile_pic_url'] as String,
+      profilePicUrl: json['profile_pic_url'] as String?,
       publicKey: json['public_key'] as String,
     );
   }

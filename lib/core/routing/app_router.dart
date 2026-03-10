@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/pages/login_screen.dart';
 import '../../features/auth/presentation/pages/splash_screen.dart';
+import '../../features/discover/presentation/bloc/discover_bloc.dart';
+import '../../features/discover/presentation/pages/discover_screen.dart';
 import '../../features/profile/domain/entities/user_profile_entity.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
 import '../../features/profile/presentation/pages/edit_profile_screen.dart';
@@ -54,8 +56,12 @@ class AppRouter {
         path: '/home',
         name: 'home',
         builder: (context, state) {
-          return BlocProvider(
-            create: (context) => sl<ProfileBloc>(),
+          // Wrap HomeScreen with MultiBlocProvider to provide multiple BLoCs
+          return MultiBlocProvider(
+            providers: [
+              BlocProvider(create: (context) => sl<ProfileBloc>()),
+              BlocProvider(create: (context) => sl<DiscoverBloc>()),
+            ],
             child: const HomeScreen(),
           );
         },
@@ -74,6 +80,17 @@ class AppRouter {
             // Providing the EXACT SAME instance of the BLoC
             value: profileBloc,
             child: EditProfileScreen(currentUser: currentUser),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/discover',
+        name: 'discover',
+        builder: (context, state) {
+          return BlocProvider(
+            create: (context) => sl<DiscoverBloc>(),
+            child: const DiscoverScreen(),
           );
         },
       ),

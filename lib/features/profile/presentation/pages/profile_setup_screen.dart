@@ -70,22 +70,19 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         // Listen to state changes and rebuild UI accordingly
         child: BlocConsumer<ProfileBloc, ProfileState>(
           listener: (context, state) {
-            // Show a floating SnackBar on error (e.g., Username already taken)
+            // Show a floating SnackBar on error
             if (state is ProfileError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.message),
                   backgroundColor: Colors.redAccent,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
                 ),
               );
             }
-            // Navigate to the next screen upon successful profile setup
-            else if (state is ProfileSetupSuccess) {
-              context.go('/home'); // Update this with your actual home route
+            // TRANSLATOR: Checking for both ProfileSetupSuccess AND ProfileLoaded
+            else if (state is ProfileSetupSuccess || state is ProfileLoaded) {
+              context.go('/home'); // Successfully goes to Home Screen!
             }
           },
           builder: (context, state) {
