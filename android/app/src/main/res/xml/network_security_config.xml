@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">10.22.93.136</domain>
+
+        <trust-anchors>
+            <certificates src="user" />
+            <certificates src="system" />
+        </trust-anchors>
+
+        <pin-set expiration="2028-01-01">
+            <pin digest="SHA-256">6QGL+cdZkG93SKYbikGXzWqhHw6eEnCEERcB+7G4k8A=</pin>
+<!--            e9018bf9c759906f7748a61b8a4197cd6aa11f0e9e127084111701fbb1b893c0-->
+        </pin-set>
+    </domain-config>
+</network-security-config>
