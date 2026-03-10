@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/pages/login_screen.dart';
 import '../../features/auth/presentation/pages/splash_screen.dart';
+import '../../features/profile/domain/entities/user_profile_entity.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
+import '../../features/profile/presentation/pages/edit_profile_screen.dart';
 import '../../service_locator.dart';
 
 class AppRouter {
@@ -56,7 +58,25 @@ class AppRouter {
             create: (context) => sl<ProfileBloc>(),
             child: const HomeScreen(),
           );
-        },      ),
+        },
+      ),
+
+      GoRoute(
+        path: '/edit-profile',
+        name: 'edit-profile',
+        builder: (context, state) {
+          // Extracting the map passed from the ProfileScreen
+          final extraMap = state.extra as Map<String, dynamic>;
+          final currentUser = extraMap['user'] as UserProfileEntity;
+          final profileBloc = extraMap['bloc'] as ProfileBloc;
+
+          return BlocProvider.value(
+            // Providing the EXACT SAME instance of the BLoC
+            value: profileBloc,
+            child: EditProfileScreen(currentUser: currentUser),
+          );
+        },
+      ),
     ],
   );
 }

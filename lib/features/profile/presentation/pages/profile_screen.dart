@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:connect/core/utils/responsive_extension.dart';
 import 'package:connect/core/presentation/widgets/clean_background.dart';
 import 'package:connect/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:connect/features/profile/presentation/bloc/profile_state.dart';
+
+import '../bloc/profile_event.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -15,7 +18,6 @@ class ProfileScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      // Extends the background behind the AppBar for a seamless look
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(
@@ -34,12 +36,92 @@ class ProfileScreen extends StatelessWidget {
         child: BlocBuilder<ProfileBloc, ProfileState>(
           builder: (context, state) {
 
-            // --- Loading State ---
+            // --- Loading State (Skeleton UI) ---
             if (state is ProfileLoading) {
               return Center(
-                child: CircularProgressIndicator(
-                  color: colorScheme.primary,
-                  strokeWidth: 3.0,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: context.widthPct(0.08)),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(height: context.heightPct(0.10)),
+
+                      // Avatar Skeleton
+                      Center(
+                        child: Container(
+                          width: context.isMobile ? 130 : 160,
+                          height: context.isMobile ? 130 : 160,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Loading...',
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: context.heightPct(0.05)),
+
+                      // Name Skeleton
+                      Center(
+                        child: Container(
+                          width: context.widthPct(0.5),
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: context.heightPct(0.02)),
+
+                      // Username Skeleton
+                      Center(
+                        child: Container(
+                          width: context.widthPct(0.3),
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: context.heightPct(0.08)),
+
+                      // Button Skeletons
+                      Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+
+                      SizedBox(height: context.heightPct(0.02)),
+
+                      Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: colorScheme.outline.withOpacity(0.2),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
@@ -50,7 +132,6 @@ class ProfileScreen extends StatelessWidget {
 
               return Center(
                 child: SingleChildScrollView(
-                  // Responsive padding matching the LoginScreen theme
                   padding: EdgeInsets.symmetric(horizontal: context.widthPct(0.08)),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -58,7 +139,7 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       SizedBox(height: context.heightPct(0.10)),
 
-                      // --- Profile Picture Section ---
+                      // Profile Picture
                       Center(
                         child: Container(
                           padding: EdgeInsets.all(context.widthPct(0.015)),
@@ -78,13 +159,11 @@ class ProfileScreen extends StatelessWidget {
                                   ? CachedNetworkImage(
                                 imageUrl: user.profilePicUrl!,
                                 fit: BoxFit.cover,
-                                // TRANSLATOR: Displays the default person icon while the image is downloading
                                 placeholder: (context, url) => Icon(
                                   Icons.person_outline,
                                   size: context.isMobile ? 60 : 80,
                                   color: colorScheme.onSurfaceVariant,
                                 ),
-                                // TRANSLATOR: Displays the default person icon if the image fails to load
                                 errorWidget: (context, url, error) => Icon(
                                   Icons.person_outline,
                                   size: context.isMobile ? 60 : 80,
@@ -103,7 +182,7 @@ class ProfileScreen extends StatelessWidget {
 
                       SizedBox(height: context.heightPct(0.03)),
 
-                      // --- User Information Section ---
+                      // User Information
                       Text(
                         user.name,
                         textAlign: TextAlign.center,
@@ -130,12 +209,24 @@ class ProfileScreen extends StatelessWidget {
 
                       SizedBox(height: context.heightPct(0.06)),
 
-                      // --- Action Buttons Section ---
+                      // Action Buttons
                       SizedBox(
                         height: 56,
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            // TRANSLATOR: Route to Edit Profile Screen
+                            // Navigate and wait until the user returns from Edit screen
+                            context.push(
+                              '/edit-profile',
+                              extra: {
+                                'user': user,
+                                'bloc': context.read<ProfileBloc>(), // අරන් යනවා පරණ BLoC එකම!
+                              },
+                            );
+
+                            // Refresh the current screen's BLoC with new data
+                            if (context.mounted) {
+                              context.read<ProfileBloc>().add(GetMyProfileRequested());
+                            }
                           },
                           icon: const Icon(Icons.edit_outlined, size: 22),
                           label: const Text(
@@ -160,7 +251,7 @@ class ProfileScreen extends StatelessWidget {
                         height: 56,
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            // TRANSLATOR: Route to Settings Screen
+                            // TODO: Route to Settings Screen
                           },
                           icon: const Icon(Icons.settings_outlined, size: 22),
                           label: const Text(
@@ -184,7 +275,7 @@ class ProfileScreen extends StatelessWidget {
 
                       SizedBox(height: context.heightPct(0.06)),
 
-                      // --- Security Information Card ---
+                      // Security Information Card
                       Container(
                         padding: EdgeInsets.all(context.widthPct(0.05)),
                         decoration: BoxDecoration(
