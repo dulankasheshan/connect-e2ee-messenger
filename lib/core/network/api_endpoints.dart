@@ -17,4 +17,7 @@ static const String searchUsers = '/user/search';
 static  String getPublicKey(String userId) => '/user/:$userId/public-key';
 static const String manageBlock = '/user/block';
 static const String getBlockedUsers = '/user/blocked';
+
+//Setting
+static const String privacySetting = '/user/privacy';
 }

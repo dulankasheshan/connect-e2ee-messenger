@@ -95,12 +95,13 @@ class DiscoverRemoteDatasourceImpl implements IDiscoverRemoteDatasource{
   @override
   Future<List<SearchUserModel>> getBlockedUsers() async {
     try{
-      return [];
-      // final response = await apiClient.dio.get(ApiEndpoints.getBlockedUsers);
-      // final List<dynamic> responseData = response.data['data'];
-      // return responseData
-      //     .map((json) => SearchUserModel.fromJson(json as Map<String, dynamic>))
-      //     .toList();
+
+      final response = await apiClient.dio.get(ApiEndpoints.getBlockedUsers);
+
+      final List<dynamic> responseData = response.data['data'];
+      return responseData
+          .map((json) => SearchUserModel.fromJson(json as Map<String, dynamic>))
+          .toList();
 
     }on DioException catch(e){
       final message = e.response?.data['data'] ?? 'Failed to load blocked users.';

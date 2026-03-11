@@ -4,6 +4,7 @@ import 'package:connect/features/profile/presentation/pages/profile_setup_screen
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/login_screen.dart';
 import '../../features/auth/presentation/pages/splash_screen.dart';
 import '../../features/discover/presentation/bloc/discover_bloc.dart';
@@ -11,6 +12,9 @@ import '../../features/discover/presentation/pages/discover_screen.dart';
 import '../../features/profile/domain/entities/user_profile_entity.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
 import '../../features/profile/presentation/pages/edit_profile_screen.dart';
+import '../../features/settings/presentation/bloc/settings_bloc.dart';
+import '../../features/settings/presentation/pages/blocked_users_screen.dart';
+import '../../features/settings/presentation/pages/settings_screen.dart';
 import '../../service_locator.dart';
 
 class AppRouter {
@@ -91,6 +95,32 @@ class AppRouter {
           return BlocProvider(
             create: (context) => sl<DiscoverBloc>(),
             child: const DiscoverScreen(),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) {
+          final currentUser = state.extra as UserProfileEntity;
+          return MultiBlocProvider(
+            providers: [
+              BlocProvider(create: (context) => sl<SettingsBloc>()),
+              BlocProvider(create: (context) => sl<AuthBloc>()), // Added AuthBloc
+            ],
+            child: SettingsScreen(currentUser: currentUser),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/blocked-users',
+        name: 'blocked-users',
+        builder: (context, state) {
+          return BlocProvider(
+            create: (context) => sl<DiscoverBloc>(),
+            child: const BlockedUsersScreen(),
           );
         },
       ),

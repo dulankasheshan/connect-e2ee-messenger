@@ -7,6 +7,10 @@ import 'package:connect/features/discover/domain/usecases/get_public_key_usecase
 import 'package:connect/features/discover/domain/usecases/search_users_usecase.dart';
 import 'package:connect/features/discover/domain/usecases/unblock_user_usecase.dart';
 import 'package:connect/features/profile/domain/usecases/update_profile_usecase.dart';
+import 'package:connect/features/settings/data/datasources/settings_remote_datasource.dart';
+import 'package:connect/features/settings/data/repositories/settings_repository_impl.dart';
+import 'package:connect/features/settings/domain/repositories/i_settings_repository.dart';
+import 'package:connect/features/settings/domain/usecases/toggle_last_seen_usecase.dart';
 import 'package:get_it/get_it.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:connect/core/network/api_client.dart';
@@ -29,6 +33,7 @@ import 'features/profile/domain/repositories/i_profile_repository.dart';
 import 'features/profile/domain/usecases/get_my_profile_usecase.dart';
 import 'features/profile/domain/usecases/setup_profile_usecase.dart';
 import 'features/profile/presentation/bloc/profile_bloc.dart';
+import 'features/settings/presentation/bloc/settings_bloc.dart';
 
 // Create a global instance of GetIt
 final sl = GetIt.instance;
@@ -73,6 +78,10 @@ Future<void> initDependencies() async {
       () => DiscoverRemoteDatasourceImpl(apiClient: sl()),
   );
 
+  sl.registerLazySingleton<ISettingsRemoteDatasource>(
+      () => SettingsRemoteDatasourceImpl(apiClient: sl())
+  );
+
   // ===========================================================================
   // 3. REPOSITORIES
   // ===========================================================================
@@ -89,6 +98,10 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton<IDiscoverRepository>(
         () => DiscoverRepositoryImpl(remoteDatasource: sl()),
+  );
+
+  sl.registerLazySingleton<ISettingsRepository>(
+      () => SettingsRepositoryImpl(remoteDatasource: sl())
   );
 
   // ===========================================================================
@@ -113,6 +126,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => BlockUserUseCase(repository: sl()));
   sl.registerLazySingleton(() => UnblockUserUseCase(repository: sl()));
   sl.registerLazySingleton(() => GetBlockedUsersUseCase(repository: sl()));
+  sl.registerLazySingleton(() => ToggleLastSeenUseCase(repository: sl()));
 
 
   // ===========================================================================
@@ -147,6 +161,13 @@ Future<void> initDependencies() async {
       blockUserUseCase: sl(),
       unblockUserUseCase: sl(),
       getBlockedUsersUseCase: sl(),
+    ),
+  );
+
+  //Setting
+  sl.registerFactory(
+        () => SettingsBloc(
+      toggleLastSeenUseCase: sl(),
     ),
   );
 }
