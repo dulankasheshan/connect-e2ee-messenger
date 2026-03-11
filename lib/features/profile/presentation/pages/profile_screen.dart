@@ -251,7 +251,7 @@ class ProfileScreen extends StatelessWidget {
                         height: 56,
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            // TODO: Route to Settings Screen
+                            context.push('/settings', extra: user);
                           },
                           icon: const Icon(Icons.settings_outlined, size: 22),
                           label: const Text(

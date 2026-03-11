@@ -8,6 +8,9 @@ class UserProfileModel extends UserProfileEntity {
     required super.name,
     super.profilePicUrl,
     required super.publicKey,
+    required super.isOnline,
+    super.lastSeen,
+    required super.lastSeenVisibility,
   });
 
   ///JSON data convert Model object
@@ -19,6 +22,13 @@ class UserProfileModel extends UserProfileEntity {
       name: json['name'] as String,
       profilePicUrl: json['profile_pic_url'] as String?,
       publicKey: json['public_key'] as String,
+      isOnline: json['is_online'] == 1,
+
+      lastSeen: json['last_seen'] != null
+          ? DateTime.parse(json['last_seen'] as String).toLocal()
+          : null,
+
+      lastSeenVisibility: json['last_seen_visibility'] == 1,
     );
   }
 
@@ -31,6 +41,9 @@ class UserProfileModel extends UserProfileEntity {
       'name': name,
       'profile_pic_url': profilePicUrl,
       'public_key': publicKey,
+      'is_online': isOnline ? 1 : 0,
+      'last_seen': lastSeen?.toUtc().toIso8601String(),
+      'last_seen_visibility': lastSeenVisibility ? 1 : 0,
     };
   }
 }

@@ -7,6 +7,9 @@ class UserProfileEntity extends Equatable {
   final String name;
   final String? profilePicUrl;
   final String publicKey;
+  final bool isOnline;
+  final DateTime? lastSeen;
+  final bool lastSeenVisibility;
 
   const UserProfileEntity({
     required this.id,
@@ -15,6 +18,9 @@ class UserProfileEntity extends Equatable {
     required this.name,
     this.profilePicUrl,
     required this.publicKey,
+    required this.isOnline,
+    this.lastSeen,
+    required this.lastSeenVisibility,
   });
 
   @override
@@ -25,5 +31,8 @@ class UserProfileEntity extends Equatable {
     name,
     profilePicUrl,
     publicKey,
+    isOnline,
+    lastSeen,
+    lastSeenVisibility,
   ];
 }
