@@ -44,6 +44,7 @@ dependencies:
 #  Network
   dio: ^5.9.2
   native_dio_adapter: ^1.5.1
+  socket_io_client: ^3.1.4
 
 #  UI
   cupertino_icons: ^1.0.8

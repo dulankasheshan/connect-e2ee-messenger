@@ -1,7 +1,7 @@
+import 'package:connect/features/chat/presentation/pages/chat_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// import 'package:connect/features/chat/presentation/pages/chat_screen.dart';
 import 'package:connect/features/discover/presentation/pages/discover_screen.dart';
 import 'package:connect/features/profile/presentation/pages/profile_screen.dart';
 import 'package:connect/features/profile/presentation/bloc/profile_bloc.dart';
@@ -19,9 +19,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Tabs screens list
   final List<Widget> _pages = [
-    // const ChatScreen(),      // 0: Chat Feature
+    const ChatListScreen(),  // 0: Chat Feature
     const DiscoverScreen(),  // 1: Discover Feature
-    const ProfileScreen(),      // 2: Profile Feature
+    const ProfileScreen(),   // 2: Profile Feature
   ];
 
   @override

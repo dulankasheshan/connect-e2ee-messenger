@@ -26,6 +26,21 @@ import 'package:connect/features/auth/presentation/bloc/auth_bloc.dart';
 
 import 'core/crypto/crypto_service.dart';
 import 'features/auth/domain/usecases/mark_profile_complete_usecase.dart';
+import 'features/chat/data/datasources/chat_remote_datasource.dart';
+import 'features/chat/data/datasources/chat_remote_datasource_impl.dart';
+import 'features/chat/data/repositories/chat_repository_impl.dart';
+import 'features/chat/domain/repositories/i_chat_repository.dart';
+import 'features/chat/domain/usecases/connect_socket_usecase.dart';
+import 'features/chat/domain/usecases/disconnect_socket_usecase.dart';
+import 'features/chat/domain/usecases/get_chat_history_usecase.dart';
+import 'features/chat/domain/usecases/receive_message_status_stream_usecase.dart';
+import 'features/chat/domain/usecases/receive_messages_stream_usecase.dart';
+import 'features/chat/domain/usecases/receive_typing_stream_usecase.dart';
+import 'features/chat/domain/usecases/send_message_usecase.dart';
+import 'features/chat/domain/usecases/send_read_receipt_usecase.dart';
+import 'features/chat/domain/usecases/send_typing_status_usecase.dart';
+import 'features/chat/domain/usecases/sync_offline_messages_usecase.dart';
+import 'features/chat/presentation/bloc/chat_bloc.dart';
 import 'features/discover/presentation/bloc/discover_bloc.dart';
 import 'features/profile/Data/datasources/profile_remote_datasource.dart';
 import 'features/profile/Data/repositories/profile_repository_impl.dart';
@@ -49,11 +64,7 @@ Future<void> initDependencies() async {
     () => const FlutterSecureStorage(),
   );
 
-  sl.registerLazySingleton<ApiClient>(
-    () => ApiClient(
-      secureStorage: sl(),
-    ),
-  );
+  sl.registerLazySingleton<ApiClient>(() => ApiClient(secureStorage: sl()));
 
   // Crypto Service
   sl.registerLazySingleton(() => CryptoService(secureStorage: sl()));
@@ -75,11 +86,15 @@ Future<void> initDependencies() async {
   );
 
   sl.registerLazySingleton<IDiscoverRemoteDatasource>(
-      () => DiscoverRemoteDatasourceImpl(apiClient: sl()),
+    () => DiscoverRemoteDatasourceImpl(apiClient: sl()),
   );
 
   sl.registerLazySingleton<ISettingsRemoteDatasource>(
-      () => SettingsRemoteDatasourceImpl(apiClient: sl())
+    () => SettingsRemoteDatasourceImpl(apiClient: sl()),
+  );
+
+  sl.registerLazySingleton<IChatRemoteDatasource>(
+    () => ChatRemoteDatasourceImpl(apiClient: sl(), secureStorage: sl()),
   );
 
   // ===========================================================================
@@ -97,11 +112,15 @@ Future<void> initDependencies() async {
   );
 
   sl.registerLazySingleton<IDiscoverRepository>(
-        () => DiscoverRepositoryImpl(remoteDatasource: sl()),
+    () => DiscoverRepositoryImpl(remoteDatasource: sl()),
   );
 
   sl.registerLazySingleton<ISettingsRepository>(
-      () => SettingsRepositoryImpl(remoteDatasource: sl())
+    () => SettingsRepositoryImpl(remoteDatasource: sl()),
+  );
+
+  sl.registerLazySingleton<IChatRepository>(
+    () => ChatRepositoryImpl(cryptoService: sl(), remoteDatasource: sl()),
   );
 
   // ===========================================================================
@@ -127,7 +146,21 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => UnblockUserUseCase(repository: sl()));
   sl.registerLazySingleton(() => GetBlockedUsersUseCase(repository: sl()));
   sl.registerLazySingleton(() => ToggleLastSeenUseCase(repository: sl()));
-
+  // Chat Use Cases
+  sl.registerLazySingleton(() => ConnectSocketUseCase(repository: sl()));
+  sl.registerLazySingleton(() => DisconnectSocketUseCase(repository: sl()));
+  sl.registerLazySingleton(() => SendMessageUseCase(repository: sl()));
+  sl.registerLazySingleton(() => SendReadReceiptUseCase(repository: sl()));
+  sl.registerLazySingleton(() => SendTypingStatusUseCase(repository: sl()));
+  sl.registerLazySingleton(() => SyncOfflineMessagesUseCase(repository: sl()));
+  sl.registerLazySingleton(() => GetChatHistoryUseCase(repository: sl()));
+  sl.registerLazySingleton(
+    () => ReceiveMessagesStreamUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton(
+    () => ReceiveMessageStatusStreamUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton(() => ReceiveTypingStreamUseCase(repository: sl()));
 
   // ===========================================================================
   // 5. BLOCS
@@ -156,18 +189,31 @@ Future<void> initDependencies() async {
 
   //Discover
   sl.registerFactory(
-        () => DiscoverBloc(
+    () => DiscoverBloc(
       searchUsersUseCase: sl(),
       blockUserUseCase: sl(),
       unblockUserUseCase: sl(),
       getBlockedUsersUseCase: sl(),
+      getPublicKeyUseCase: sl(),
     ),
   );
 
   //Setting
+  sl.registerFactory(() => SettingsBloc(toggleLastSeenUseCase: sl()));
+
+  // Chat
   sl.registerFactory(
-        () => SettingsBloc(
-      toggleLastSeenUseCase: sl(),
+    () => ChatBloc(
+      connectSocketUseCase: sl(),
+      disconnectSocketUseCase: sl(),
+      getChatHistoryUseCase: sl(),
+      receiveMessageStatusStreamUseCase: sl(),
+      receiveMessagesStreamUseCase: sl(),
+      receiveTypingStreamUseCase: sl(),
+      sendMessageUseCase: sl(),
+      sendReadReceiptUseCase: sl(),
+      sendTypingStatusUseCase: sl(),
+      syncOfflineMessagesUseCase: sl(),
     ),
   );
 }

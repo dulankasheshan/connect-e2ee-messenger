@@ -62,4 +62,48 @@ class CryptoService {
     secureRandom.seed(KeyParameter(Uint8List.fromList(seeds)));
     return secureRandom;
   }
+
+
+
+  // ==========================================
+  // MESSAGE ENCRYPTION & DECRYPTION
+  // ==========================================
+
+  /// Encrypts a plaintext message using the receiver's Public Key.
+  /// Returns a Base64 encoded ciphertext string.
+  Future<String> encryptMessage(String plainText, String publicKeyPem) async {
+    try {
+      // 1. Convert PEM string back to RSAPublicKey object
+      final publicKey = CryptoUtils.rsaPublicKeyFromPem(publicKeyPem);
+
+      // 2. Encrypt the text (basic_utils handles the conversion and Base64 encoding)
+      final encryptedText = CryptoUtils.rsaEncrypt(plainText, publicKey);
+
+      return encryptedText;
+    } catch (e) {
+      throw Exception('Failed to encrypt message: $e');
+    }
+  }
+
+  /// Decrypts a Base64 encoded ciphertext message using our own stored Private Key.
+  /// Returns the original plaintext string.
+  Future<String> decryptMessage(String base64CipherText) async {
+    try {
+      // 1. Get our private key from secure storage
+      final privateKeyPem = await getStoredPrivateKey();
+      if (privateKeyPem == null) {
+        throw Exception('Private key not found in secure storage.');
+      }
+
+      // 2. Convert PEM string back to RSAPrivateKey object
+      final privateKey = CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem);
+
+      // 3. Decrypt the text
+      final plainText = CryptoUtils.rsaDecrypt(base64CipherText, privateKey);
+
+      return plainText;
+    } catch (e) {
+      throw Exception('Failed to decrypt message: $e');
+    }
+  }
 }
