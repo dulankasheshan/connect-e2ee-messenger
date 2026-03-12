@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:connect/core/network/api_client.dart';
 import 'package:connect/core/network/api_endpoints.dart';
 import 'package:connect/features/profile/Data/Models/user_profile_model.dart';
-import 'package:connect/features/profile/domain/repositories/i_profile_repository.dart';
 import 'package:dio/dio.dart';
 
 import '../../../../core/errors/exceptions.dart';
@@ -25,6 +24,7 @@ abstract class IProfileRemoteDataSource {
   Future<UserProfileModel> updateProfile({
     String? name,
     String? username,
+    String? publicKey,
     File? profilePic,
   });
 }
@@ -44,12 +44,19 @@ class ProfileRemoteDatasourceImpl implements IProfileRemoteDataSource {
     required String publicKey,
   }) async {
     try {
-      FormData formData = FormData.fromMap({
+      final Map<String, dynamic> dataMap = {
         'name': name,
-        'username': ?username,
         'public_key': publicKey,
-        'fcm_device_token': ?fcmDeviceToken,
-      });
+      };
+
+      if (username != null && username.isNotEmpty) {
+        dataMap['username'] = username;
+      }
+      if (fcmDeviceToken != null && fcmDeviceToken.isNotEmpty) {
+        dataMap['fcm_device_token'] = fcmDeviceToken;
+      }
+
+      FormData formData = FormData.fromMap(dataMap);
 
       if (profilePic != null) {
         formData.files.add(
@@ -111,9 +118,10 @@ class ProfileRemoteDatasourceImpl implements IProfileRemoteDataSource {
   Future<UserProfileModel> updateProfile({
     String? name,
     String? username,
+    String? publicKey,
     File? profilePic,
-  }) async{
-    try{
+  }) async {
+    try {
       final Map<String, dynamic> dataMap = {};
 
       if (name != null && name.isNotEmpty) {
@@ -121,6 +129,9 @@ class ProfileRemoteDatasourceImpl implements IProfileRemoteDataSource {
       }
       if (username != null && username.isNotEmpty) {
         dataMap['username'] = username;
+      }
+      if (publicKey != null && publicKey.isNotEmpty) {
+        dataMap['public_key'] = publicKey;
       }
 
       FormData formData = FormData.fromMap(dataMap);
@@ -150,7 +161,6 @@ class ProfileRemoteDatasourceImpl implements IProfileRemoteDataSource {
           response.data['message'] ?? 'Profile data update failed..',
         );
       }
-
     } on DioException catch (e) {
       final errorMessage =
           e.response?.data['message'] ?? 'Profile data update failed..';

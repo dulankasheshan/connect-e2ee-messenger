@@ -9,6 +9,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'features/chat/presentation/bloc/chat_bloc.dart';
+import 'features/chat/presentation/bloc/chat_list/chat_list_bloc.dart';
+
 /// Global HTTP overrides to bypass SSL certificate validation.
 /// This ensures that widgets like [NetworkImage] can load assets from
 /// local servers with self-signed certificates during development.
@@ -51,6 +54,12 @@ class ConnectChatApp extends StatelessWidget {
           // Fetch the AuthBloc instance from our Service Locator (get_it)
           create: (context) => sl<AuthBloc>(),
         ),
+
+        BlocProvider<ChatListBloc>(
+          create: (context) => sl<ChatListBloc>(),
+        ),
+
+        BlocProvider<ChatBloc>(create: (context) => sl<ChatBloc>())
       ],
       // Using router constructor for GoRouter integration
       child: MaterialApp.router(

@@ -9,6 +9,10 @@ import 'package:connect/features/discover/presentation/bloc/discover_event.dart'
 import 'package:connect/features/discover/presentation/bloc/discover_state.dart';
 import 'package:connect/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:connect/features/profile/presentation/bloc/profile_state.dart';
+import '../../../../service_locator.dart';
+import '../../../chat/domain/repositories/i_chat_repository.dart';
+import '../../../chat/presentation/bloc/chat_list/chat_list_bloc.dart';
+import '../../../chat/presentation/bloc/chat_list/chat_list_event.dart';
 import '../widgets/user_list_tile.dart';
 
 class DiscoverScreen extends StatefulWidget {
@@ -159,28 +163,37 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
                               final currentUser = profileState.profileEntity;
 
-                              // Capture the existing DiscoverBloc before opening the dialog
+                              // Capture both Blocs BEFORE the async gap/dialog
                               final discoverBloc = context.read<DiscoverBloc>();
+                              final chatListBloc = context.read<ChatListBloc>();
 
-                              // Request the target user's public key
                               discoverBloc.add(GetPublicKeyRequested(userId: targetUser.id));
 
                               showDialog(
                                 context: context,
                                 barrierDismissible: false,
                                 builder: (dialogContext) {
-                                  // Use BlocProvider.value to pass the existing bloc into the dialog's context
                                   return BlocProvider.value(
                                     value: discoverBloc,
                                     child: BlocListener<DiscoverBloc, DiscoverState>(
-                                      listener: (context, discoverState) {
+                                      listener: (innerContext, discoverState) {
                                         if (discoverState is DiscoverPublicKeyLoaded) {
                                           Navigator.of(dialogContext).pop();
+
+                                          sl<IChatRepository>().saveCachedUser(
+                                            id: targetUser.id,
+                                            name: targetUser.name,
+                                            username: targetUser.username,
+                                            profilePicUrl: targetUser.profilePicUrl,
+                                          );
 
                                           context.push('/chat', extra: {
                                             'currentUser': currentUser,
                                             'receiverUser': targetUser,
                                             'receiverPublicKey': discoverState.publicKey,
+                                          }).then((_) {
+                                            // Use the captured reference here safely!
+                                            chatListBloc.add(LoadRecentChatsRequested());
                                           });
                                         } else if (discoverState is DiscoverError) {
                                           Navigator.of(dialogContext).pop();

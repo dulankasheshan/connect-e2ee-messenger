@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:connect/features/chat/domain/entities/message_entity.dart';
 
-// Import all 10 use cases
+import '../../domain/usecases/clear_all_chat_history_usecase.dart';
 import '../../domain/usecases/connect_socket_usecase.dart';
 import '../../domain/usecases/disconnect_socket_usecase.dart';
 import '../../domain/usecases/get_chat_history_usecase.dart';
+import '../../domain/usecases/receive_deleted_message_stream_usecase.dart';
+import '../../domain/usecases/receive_edited_message_stream_usecase.dart';
 import '../../domain/usecases/receive_message_status_stream_usecase.dart';
 import '../../domain/usecases/receive_messages_stream_usecase.dart';
 import '../../domain/usecases/receive_typing_stream_usecase.dart';
@@ -13,6 +15,9 @@ import '../../domain/usecases/send_message_usecase.dart';
 import '../../domain/usecases/send_read_receipt_usecase.dart';
 import '../../domain/usecases/send_typing_status_usecase.dart';
 import '../../domain/usecases/sync_offline_messages_usecase.dart';
+import '../../domain/usecases/receive_online_status_stream_usecase.dart';
+import '../../domain/usecases/edit_message_usecase.dart';
+import '../../domain/usecases/delete_message_usecase.dart';
 
 import 'chat_event.dart';
 import 'chat_state.dart';
@@ -28,11 +33,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final SendReadReceiptUseCase sendReadReceiptUseCase;
   final SendTypingStatusUseCase sendTypingStatusUseCase;
   final SyncOfflineMessagesUseCase syncOfflineMessagesUseCase;
+  final ReceiveOnlineStatusStreamUseCase receiveOnlineStatusStreamUseCase;
+  final EditMessageUseCase editMessageUseCase;
+  final DeleteMessageUseCase deleteMessageUseCase;
+  final ReceiveEditedMessageStreamUseCase receiveEditedMessageStreamUseCase;
+  final ReceiveDeletedMessageStreamUseCase receiveDeletedMessageStreamUseCase;
+  final ClearAllChatHistoryUseCase clearAllChatHistoryUseCase;
 
-  // Stream Subscriptions
   StreamSubscription? _messageSubscription;
   StreamSubscription? _statusSubscription;
   StreamSubscription? _typingSubscription;
+  StreamSubscription? _onlineStatusSubscription;
+  StreamSubscription? _editedMessageSubscription;
+  StreamSubscription? _deletedMessageSubscription;
 
   ChatBloc({
     required this.connectSocketUseCase,
@@ -45,6 +58,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     required this.sendReadReceiptUseCase,
     required this.sendTypingStatusUseCase,
     required this.syncOfflineMessagesUseCase,
+    required this.receiveOnlineStatusStreamUseCase,
+    required this.editMessageUseCase,
+    required this.deleteMessageUseCase,
+    required this.receiveEditedMessageStreamUseCase,
+    required this.receiveDeletedMessageStreamUseCase,
+    required this.clearAllChatHistoryUseCase,
   }) : super(ChatInitial()) {
 
     on<ConnectSocketRequested>(_onConnectSocket);
@@ -53,11 +72,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<SendMessageRequested>(_onSendMessage);
     on<SendReadReceiptRequested>(_onSendReadReceipt);
     on<SendTypingStatusRequested>(_onSendTypingStatus);
+    on<EditModeToggled>(_onEditModeToggled);
+    on<EditMessageRequested>(_onEditMessage);
+    on<DeleteMessageRequested>(_onDeleteMessage);
 
-    // Internal Stream Handlers
     on<MessageReceived>(_onMessageReceived);
     on<MessageStatusUpdated>(_onMessageStatusUpdated);
     on<TypingStatusReceived>(_onTypingStatusReceived);
+    on<OnlineStatusReceived>(_onOnlineStatusReceived);
+    on<EditedMessageReceived>(_onEditedMessageReceived);
+    on<DeletedMessageReceived>(_onDeletedMessageReceived);
+    on<ClearAllChatHistoryRequested>(_onClearAllChatHistory);
   }
 
   Future<void> _onConnectSocket(ConnectSocketRequested event, Emitter<ChatState> emit) async {
@@ -65,7 +90,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     result.fold(
           (failure) => emit(ChatError(message: failure.message)),
           (_) {
-        // Once connected, start listening to streams!
         _messageSubscription = receiveMessagesStreamUseCase().listen(
               (message) => add(MessageReceived(message: message)),
         );
@@ -74,6 +98,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
         _typingSubscription = receiveTypingStreamUseCase().listen(
               (typingData) => add(TypingStatusReceived(typingData: typingData)),
+        );
+        _onlineStatusSubscription = receiveOnlineStatusStreamUseCase().listen(
+              (statusData) => add(OnlineStatusReceived(statusData: statusData)),
+        );
+        _editedMessageSubscription = receiveEditedMessageStreamUseCase().listen(
+              (data) => add(EditedMessageReceived(editData: data)),
+        );
+        _deletedMessageSubscription = receiveDeletedMessageStreamUseCase().listen(
+              (data) => add(DeletedMessageReceived(deleteData: data)),
         );
       },
     );
@@ -86,32 +119,86 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onLoadChatHistory(LoadChatHistoryRequested event, Emitter<ChatState> emit) async {
+    bool currentOnline = false;
+    if (state is ChatLoaded) {
+      currentOnline = (state as ChatLoaded).isOnline;
+    }
+
+    final finalIsOnline = currentOnline || event.isOnline;
+
     emit(ChatLoading());
 
-    // 1. First sync offline messages
     await syncOfflineMessagesUseCase();
 
-    // 2. Then load history
     final result = await getChatHistoryUseCase(event.userId);
     result.fold(
           (failure) => emit(ChatError(message: failure.message)),
-          (messages) => emit(ChatLoaded(messages: messages)),
+          (messages) => emit(ChatLoaded(messages: messages, isOnline: finalIsOnline)),
     );
   }
 
   Future<void> _onSendMessage(SendMessageRequested event, Emitter<ChatState> emit) async {
-    // Optimistically add the message to the UI first
     if (state is ChatLoaded) {
       final currentState = state as ChatLoaded;
       final updatedMessages = List<MessageEntity>.from(currentState.messages)..insert(0, event.message);
       emit(currentState.copyWith(messages: updatedMessages));
     }
 
-    final result = await sendMessageUseCase(event.message, event.receiverPublicKey);
-    if (result.isLeft()) {
-      // Handle error (e.g., mark message as failed in UI)
-      // For now, we just print or emit error
+    await sendMessageUseCase(event.message, event.receiverPublicKey);
+  }
+
+  void _onEditModeToggled(EditModeToggled event, Emitter<ChatState> emit) {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      emit(currentState.copyWith(
+          editingMessageId: event.messageId,
+          clearEditing: event.messageId == null
+      ));
     }
+  }
+
+  Future<void> _onEditMessage(EditMessageRequested event, Emitter<ChatState> emit) async {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      final updatedMessages = currentState.messages.map((m) {
+        if (m.id == event.messageId) {
+          return MessageEntity(
+            id: m.id,
+            senderId: m.senderId,
+            receiverId: m.receiverId,
+            decryptedText: event.newPlaintext,
+            status: m.status,
+            createdAt: m.createdAt,
+            clientTempId: m.clientTempId,
+          );
+        }
+        return m;
+      }).toList();
+      emit(currentState.copyWith(messages: updatedMessages, clearEditing: true));
+    }
+    await editMessageUseCase(event.messageId, event.newPlaintext, event.receiverPublicKey);
+  }
+
+  Future<void> _onDeleteMessage(DeleteMessageRequested event, Emitter<ChatState> emit) async {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      final updatedMessages = currentState.messages.map((m) {
+        if (m.id == event.messageId) {
+          return MessageEntity(
+            id: m.id,
+            senderId: m.senderId,
+            receiverId: m.receiverId,
+            decryptedText: '🚫 This message was deleted',
+            status: m.status,
+            createdAt: m.createdAt,
+            clientTempId: m.clientTempId,
+          );
+        }
+        return m;
+      }).toList();
+      emit(currentState.copyWith(messages: updatedMessages));
+    }
+    await deleteMessageUseCase(event.messageId);
   }
 
   Future<void> _onSendReadReceipt(SendReadReceiptRequested event, Emitter<ChatState> emit) async {
@@ -122,31 +209,39 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     await sendTypingStatusUseCase(event.receiverId, event.isTyping);
   }
 
-  // --- Stream Event Handlers ---
-
   void _onMessageReceived(MessageReceived event, Emitter<ChatState> emit) {
     if (state is ChatLoaded) {
       final currentState = state as ChatLoaded;
-      // Add new message to the top of the list (index 0)
       final updatedMessages = List<MessageEntity>.from(currentState.messages)..insert(0, event.message);
       emit(currentState.copyWith(messages: updatedMessages));
-
-      // Send read receipt back automatically
       add(SendReadReceiptRequested(messageId: event.message.id));
     }
   }
+
 
   void _onMessageStatusUpdated(MessageStatusUpdated event, Emitter<ChatState> emit) {
     if (state is ChatLoaded) {
       final currentState = state as ChatLoaded;
       final statusData = event.statusData;
 
+      final realId = statusData['messageId']; // Backend ID
+      final tempId = statusData['client_temp_id'];
+
       final updatedMessages = currentState.messages.map((msg) {
-        if (msg.id == statusData['messageId'] || msg.clientTempId == statusData['client_temp_id']) {
+        if (msg.id == realId || msg.clientTempId == tempId) {
           return MessageEntity(
-            id: msg.id, senderId: msg.senderId, receiverId: msg.receiverId,
-            decryptedText: msg.decryptedText, status: statusData['status'],
-            createdAt: msg.createdAt, clientTempId: msg.clientTempId,
+            id: realId ?? msg.id, // 👈 Update the message ID to the REAL ID!
+            senderId: msg.senderId,
+            receiverId: msg.receiverId,
+            decryptedText: msg.decryptedText,
+            status: statusData['status'],
+            createdAt: msg.createdAt,
+            clientTempId: msg.clientTempId,
+            isDeleted: msg.isDeleted,
+            isEdited: msg.isEdited,
+            mediaType: msg.mediaType,
+            mediaUrl: msg.mediaUrl,
+            replyToMsgId: msg.replyToMsgId,
           );
         }
         return msg;
@@ -156,6 +251,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
+
+
   void _onTypingStatusReceived(TypingStatusReceived event, Emitter<ChatState> emit) {
     if (state is ChatLoaded) {
       final currentState = state as ChatLoaded;
@@ -164,10 +261,93 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
+  void _onOnlineStatusReceived(OnlineStatusReceived event, Emitter<ChatState> emit) {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      final isOnline = event.statusData['isOnline'] as bool;
+
+      DateTime? parsedLastSeen;
+      if (!isOnline && event.statusData['lastSeen'] != null) {
+        parsedLastSeen = DateTime.tryParse(event.statusData['lastSeen'] as String);
+      }
+
+      emit(currentState.copyWith(
+        isOnline: isOnline,
+        lastSeen: parsedLastSeen ?? currentState.lastSeen,
+      ));
+    }
+  }
+
+  void _onEditedMessageReceived(EditedMessageReceived event, Emitter<ChatState> emit) {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      final messageId = event.editData['messageId'];
+
+      final newText = event.editData['newEncryptedText'];
+
+      final updatedMessages = currentState.messages.map((m) {
+        if (m.id == messageId) {
+          return MessageEntity(
+            id: m.id,
+            senderId: m.senderId,
+            receiverId: m.receiverId,
+            decryptedText: newText,
+            status: m.status,
+            createdAt: m.createdAt,
+            clientTempId: m.clientTempId,
+          );
+        }
+        return m;
+      }).toList();
+
+      emit(currentState.copyWith(messages: updatedMessages));
+    }
+  }
+
+  void _onDeletedMessageReceived(DeletedMessageReceived event, Emitter<ChatState> emit) {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      final messageId = event.deleteData['messageId'];
+
+      final updatedMessages = currentState.messages.map((m) {
+        if (m.id == messageId) {
+          return MessageEntity(
+            id: m.id,
+            senderId: m.senderId,
+            receiverId: m.receiverId,
+            decryptedText: '🚫 This message was deleted',
+            status: m.status,
+            createdAt: m.createdAt,
+            clientTempId: m.clientTempId,
+          );
+        }
+        return m;
+      }).toList();
+
+      emit(currentState.copyWith(messages: updatedMessages));
+    }
+  }
+
+
+  Future<void> _onClearAllChatHistory(ClearAllChatHistoryRequested event, Emitter<ChatState> emit) async {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+
+      // Optimistically clear the UI
+      emit(currentState.copyWith(messages: []));
+
+      // Clear the local database
+      await clearAllChatHistoryUseCase(event.chatUserId);
+    }
+  }
+
   void _cancelSubscriptions() {
     _messageSubscription?.cancel();
     _statusSubscription?.cancel();
     _typingSubscription?.cancel();
+    _onlineStatusSubscription?.cancel();
+    _editedMessageSubscription?.cancel();
+    _deletedMessageSubscription?.cancel();
   }
 
   @override

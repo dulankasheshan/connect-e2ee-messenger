@@ -1,3 +1,8 @@
+import 'package:connect/features/chat/domain/usecases/clear_all_chat_history_usecase.dart';
+import 'package:connect/features/chat/domain/usecases/delete_message_usecase.dart';
+import 'package:connect/features/chat/domain/usecases/edit_message_usecase.dart';
+import 'package:connect/features/chat/domain/usecases/receive_deleted_message_stream_usecase.dart';
+import 'package:connect/features/chat/domain/usecases/receive_edited_message_stream_usecase.dart';
 import 'package:connect/features/discover/data/datasources/discover_remote_datasource.dart';
 import 'package:connect/features/discover/data/repositories/discover_repository_impl.dart';
 import 'package:connect/features/discover/domain/repositories/i_discover_repository.dart';
@@ -23,24 +28,32 @@ import 'package:connect/features/auth/domain/usecases/send_otp_usecase.dart';
 import 'package:connect/features/auth/domain/usecases/verify_otp_usecase.dart';
 import 'package:connect/features/auth/domain/usecases/check_auth_status_usecase.dart';
 import 'package:connect/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:isar/isar.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'core/crypto/crypto_service.dart';
 import 'features/auth/domain/usecases/mark_profile_complete_usecase.dart';
+import 'features/chat/data/datasources/chat_local_datasource.dart';
 import 'features/chat/data/datasources/chat_remote_datasource.dart';
 import 'features/chat/data/datasources/chat_remote_datasource_impl.dart';
+import 'features/chat/data/models/message_local_model.dart';
+import 'features/chat/data/models/user_local_model.dart';
 import 'features/chat/data/repositories/chat_repository_impl.dart';
 import 'features/chat/domain/repositories/i_chat_repository.dart';
 import 'features/chat/domain/usecases/connect_socket_usecase.dart';
 import 'features/chat/domain/usecases/disconnect_socket_usecase.dart';
 import 'features/chat/domain/usecases/get_chat_history_usecase.dart';
+import 'features/chat/domain/usecases/get_recent_chats_usecase.dart';
 import 'features/chat/domain/usecases/receive_message_status_stream_usecase.dart';
 import 'features/chat/domain/usecases/receive_messages_stream_usecase.dart';
+import 'features/chat/domain/usecases/receive_online_status_stream_usecase.dart';
 import 'features/chat/domain/usecases/receive_typing_stream_usecase.dart';
 import 'features/chat/domain/usecases/send_message_usecase.dart';
 import 'features/chat/domain/usecases/send_read_receipt_usecase.dart';
 import 'features/chat/domain/usecases/send_typing_status_usecase.dart';
 import 'features/chat/domain/usecases/sync_offline_messages_usecase.dart';
 import 'features/chat/presentation/bloc/chat_bloc.dart';
+import 'features/chat/presentation/bloc/chat_list/chat_list_bloc.dart';
 import 'features/discover/presentation/bloc/discover_bloc.dart';
 import 'features/profile/Data/datasources/profile_remote_datasource.dart';
 import 'features/profile/Data/repositories/profile_repository_impl.dart';
@@ -59,6 +72,14 @@ Future<void> initDependencies() async {
   // ===========================================================================
   // registerLazySingleton means it will only create the object when it's first requested,
   // and then reuse that SAME object for the rest of the app's life.
+
+  // Init Isar local database
+  final dir = await getApplicationDocumentsDirectory();
+  final isar = await Isar.open([
+    MessageLocalModelSchema,
+    UserLocalModelSchema,
+  ], directory: dir.path);
+  sl.registerLazySingleton<Isar>(() => isar);
 
   sl.registerLazySingleton<FlutterSecureStorage>(
     () => const FlutterSecureStorage(),
@@ -97,6 +118,10 @@ Future<void> initDependencies() async {
     () => ChatRemoteDatasourceImpl(apiClient: sl(), secureStorage: sl()),
   );
 
+  sl.registerLazySingleton<IChatLocalDatasource>(
+    () => ChatLocalDatasourceImpl(isar: sl()),
+  );
+
   // ===========================================================================
   // 3. REPOSITORIES
   // ===========================================================================
@@ -120,7 +145,11 @@ Future<void> initDependencies() async {
   );
 
   sl.registerLazySingleton<IChatRepository>(
-    () => ChatRepositoryImpl(cryptoService: sl(), remoteDatasource: sl()),
+    () => ChatRepositoryImpl(
+      cryptoService: sl(),
+      remoteDatasource: sl(),
+      localDatasource: sl(),
+    ),
   );
 
   // ===========================================================================
@@ -129,9 +158,7 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton(() => SendOtpUseCase(repository: sl()));
   sl.registerLazySingleton(() => VerifyOtpUseCase(repository: sl()));
-  sl.registerLazySingleton(
-    () => LogoutUseCase(repository: sl(), cryptoService: sl()),
-  );
+  sl.registerLazySingleton(() => LogoutUseCase(repository: sl()));
   sl.registerLazySingleton(() => CheckAuthStatusUseCase(repository: sl()));
   sl.registerLazySingleton(
     () => SetupProfileUseCase(repository: sl(), cryptoService: sl()),
@@ -161,6 +188,13 @@ Future<void> initDependencies() async {
     () => ReceiveMessageStatusStreamUseCase(repository: sl()),
   );
   sl.registerLazySingleton(() => ReceiveTypingStreamUseCase(repository: sl()));
+  sl.registerLazySingleton(() => GetRecentChatsUseCase(sl()));
+  sl.registerLazySingleton(() => ReceiveOnlineStatusStreamUseCase(sl()));
+  sl.registerLazySingleton(() => EditMessageUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteMessageUseCase(sl()));
+  sl.registerLazySingleton(() => ReceiveEditedMessageStreamUseCase(sl()));
+  sl.registerLazySingleton(() => ReceiveDeletedMessageStreamUseCase(sl()));
+  sl.registerLazySingleton(() => ClearAllChatHistoryUseCase(sl()));
 
   // ===========================================================================
   // 5. BLOCS
@@ -175,6 +209,8 @@ Future<void> initDependencies() async {
       verifyOtpUseCase: sl(),
       logoutUseCase: sl(),
       checkAuthStatusUseCase: sl(),
+      cryptoService: sl(),
+      profileRepository: sl(),
     ),
   );
 
@@ -214,6 +250,14 @@ Future<void> initDependencies() async {
       sendReadReceiptUseCase: sl(),
       sendTypingStatusUseCase: sl(),
       syncOfflineMessagesUseCase: sl(),
+      receiveOnlineStatusStreamUseCase: sl(),
+      editMessageUseCase: sl(),
+      deleteMessageUseCase: sl(),
+      receiveEditedMessageStreamUseCase: sl(),
+      receiveDeletedMessageStreamUseCase: sl(),
+      clearAllChatHistoryUseCase: sl(),
     ),
   );
+
+  sl.registerFactory(() => ChatListBloc(getRecentChatsUseCase: sl()));
 }

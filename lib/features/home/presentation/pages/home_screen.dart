@@ -7,6 +7,9 @@ import 'package:connect/features/profile/presentation/pages/profile_screen.dart'
 import 'package:connect/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:connect/features/profile/presentation/bloc/profile_event.dart';
 
+import '../../../chat/presentation/bloc/chat_list/chat_list_bloc.dart';
+import '../../../chat/presentation/bloc/chat_list/chat_list_event.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -43,6 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentIndex = index;
           });
+
+          // Refresh the Chat List whenever the user navigates to the Chat tab
+          if (index == 0) {
+            context.read<ChatListBloc>().add(LoadRecentChatsRequested());
+          }
         },
         destinations: const [
           NavigationDestination(

@@ -8,22 +8,32 @@ abstract class ChatEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-// --- User Actions ---
 class ConnectSocketRequested extends ChatEvent {}
 
 class DisconnectSocketRequested extends ChatEvent {}
 
 class LoadChatHistoryRequested extends ChatEvent {
   final String userId;
-  const LoadChatHistoryRequested({required this.userId});
+  final bool isOnline;
+
+  const LoadChatHistoryRequested({
+    required this.userId,
+    this.isOnline = false,
+  });
+
   @override
-  List<Object> get props => [userId];
+  List<Object> get props => [userId, isOnline];
 }
 
 class SendMessageRequested extends ChatEvent {
   final MessageEntity message;
   final String receiverPublicKey;
-  const SendMessageRequested({required this.message, required this.receiverPublicKey});
+
+  const SendMessageRequested({
+    required this.message,
+    required this.receiverPublicKey,
+  });
+
   @override
   List<Object> get props => [message, receiverPublicKey];
 }
@@ -38,12 +48,47 @@ class SendReadReceiptRequested extends ChatEvent {
 class SendTypingStatusRequested extends ChatEvent {
   final String receiverId;
   final bool isTyping;
-  const SendTypingStatusRequested({required this.receiverId, required this.isTyping});
+
+  const SendTypingStatusRequested({
+    required this.receiverId,
+    required this.isTyping,
+  });
+
   @override
   List<Object> get props => [receiverId, isTyping];
 }
 
-// --- Stream Events (Triggered internally by Streams) ---
+class EditModeToggled extends ChatEvent {
+  final String? messageId;
+  const EditModeToggled({this.messageId});
+  @override
+  List<Object?> get props => [messageId];
+}
+
+class EditMessageRequested extends ChatEvent {
+  final String messageId;
+  final String newPlaintext;
+  final String receiverPublicKey;
+
+  const EditMessageRequested({
+    required this.messageId,
+    required this.newPlaintext,
+    required this.receiverPublicKey,
+  });
+
+  @override
+  List<Object> get props => [messageId, newPlaintext, receiverPublicKey];
+}
+
+class DeleteMessageRequested extends ChatEvent {
+  final String messageId;
+
+  const DeleteMessageRequested({required this.messageId});
+
+  @override
+  List<Object> get props => [messageId];
+}
+
 class MessageReceived extends ChatEvent {
   final MessageEntity message;
   const MessageReceived({required this.message});
@@ -63,4 +108,32 @@ class TypingStatusReceived extends ChatEvent {
   const TypingStatusReceived({required this.typingData});
   @override
   List<Object> get props => [typingData];
+}
+
+class OnlineStatusReceived extends ChatEvent {
+  final Map<String, dynamic> statusData;
+  const OnlineStatusReceived({required this.statusData});
+  @override
+  List<Object> get props => [statusData];
+}
+
+class EditedMessageReceived extends ChatEvent {
+  final Map<String, dynamic> editData;
+  const EditedMessageReceived({required this.editData});
+  @override
+  List<Object> get props => [editData];
+}
+
+class DeletedMessageReceived extends ChatEvent {
+  final Map<String, dynamic> deleteData;
+  const DeletedMessageReceived({required this.deleteData});
+  @override
+  List<Object> get props => [deleteData];
+}
+
+class ClearAllChatHistoryRequested extends ChatEvent {
+  final String chatUserId;
+  const ClearAllChatHistoryRequested({required this.chatUserId});
+  @override
+  List<Object> get props => [chatUserId];
 }

@@ -19,5 +19,6 @@ abstract class IProfileRepository {
     String? name,
     String? username,
     File? profilePic,
+    String? publicKey
   });
 }

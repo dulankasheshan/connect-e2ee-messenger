@@ -137,13 +137,10 @@ class AppRouter {
           final receiverUser = args['receiverUser'] as SearchUserEntity;
           final receiverPublicKey = args['receiverPublicKey'] as String;
 
-          return BlocProvider(
-            create: (context) => sl<ChatBloc>(),
-            child: ChatScreen(
-              currentUser: currentUser,
-              receiverUser: receiverUser,
-              receiverPublicKey: receiverPublicKey,
-            ),
+          return ChatScreen(
+            currentUser: currentUser,
+            receiverUser: receiverUser,
+            receiverPublicKey: receiverPublicKey,
           );
         },
       ),
