@@ -202,7 +202,7 @@ This application is strictly store-and-forward E2EE. The backend never sees plai
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/____Project_Username____/Connect-Chat-Flutter.git](https://github.com/____Project_Username____/Connect-Chat-Flutter.git)
+   git clone [https://github.com/_____Project_Username____/Connect-Chat-Flutter.git](https://github.com/____Project_Username____/Connect-Chat-Flutter.git)
    cd Connect-Chat-Flutter
    ```
 2. **Install dependencies:**
