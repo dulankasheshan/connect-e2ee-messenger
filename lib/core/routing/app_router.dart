@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/login_screen.dart';
 import '../../features/auth/presentation/pages/splash_screen.dart';
+import '../../features/chat/presentation/bloc/chat_bloc.dart';
+import '../../features/chat/presentation/pages/chat_screen.dart';
+import '../../features/discover/domain/entities/search_user_entity.dart';
 import '../../features/discover/presentation/bloc/discover_bloc.dart';
 import '../../features/discover/presentation/pages/discover_screen.dart';
 import '../../features/profile/domain/entities/user_profile_entity.dart';
@@ -121,6 +124,23 @@ class AppRouter {
           return BlocProvider(
             create: (context) => sl<DiscoverBloc>(),
             child: const BlockedUsersScreen(),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/chat',
+        name: 'chat',
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>;
+          final currentUser = args['currentUser'] as UserProfileEntity;
+          final receiverUser = args['receiverUser'] as SearchUserEntity;
+          final receiverPublicKey = args['receiverPublicKey'] as String;
+
+          return ChatScreen(
+            currentUser: currentUser,
+            receiverUser: receiverUser,
+            receiverPublicKey: receiverPublicKey,
           );
         },
       ),

@@ -33,7 +33,7 @@ class DiscoverRemoteDatasourceImpl implements IDiscoverRemoteDatasource{
           .toList();
 
     }on DioException catch(e){
-      final message = e.response?.data['data'] ?? 'Search failed..';
+      final message = e.response?.data['message'] ?? 'Search failed..';
       throw ServerException(message);
     }catch(e){
       throw ServerException('An unexpected error occurred.');
@@ -48,7 +48,7 @@ class DiscoverRemoteDatasourceImpl implements IDiscoverRemoteDatasource{
       return response.data['data']['public_key'] as String;
 
     }on DioException catch(e){
-      final message = e.response?.data['data'] ?? 'Failed to fetch public key.';
+      final message = e.response?.data['message'] ?? 'Failed to fetch public key.';
       throw ServerException(message);
     }catch (e){
       throw ServerException('An unexpected error occurred.');
@@ -67,7 +67,7 @@ class DiscoverRemoteDatasourceImpl implements IDiscoverRemoteDatasource{
         },
       );
     }on DioException catch(e){
-      final message = e.response?.data['data'] ?? 'Failed to block user.';
+      final message = e.response?.data['message'] ?? 'Failed to block user.';
       throw ServerException(message);
     }catch (e){
       throw ServerException('An unexpected error occurred.');
@@ -85,7 +85,7 @@ class DiscoverRemoteDatasourceImpl implements IDiscoverRemoteDatasource{
         },
       );
     }on DioException catch(e){
-      final message = e.response?.data['data'] ?? 'Failed to unblock user.';
+      final message = e.response?.data['message'] ?? 'Failed to unblock user.';
       throw ServerException(message);
     }catch (e){
       throw ServerException('An unexpected error occurred.');
@@ -104,7 +104,7 @@ class DiscoverRemoteDatasourceImpl implements IDiscoverRemoteDatasource{
           .toList();
 
     }on DioException catch(e){
-      final message = e.response?.data['data'] ?? 'Failed to load blocked users.';
+      final message = e.response?.data['message'] ?? 'Failed to load blocked users.';
       throw ServerException(message);
     }catch (e){
       throw ServerException('An unexpected error occurred.');

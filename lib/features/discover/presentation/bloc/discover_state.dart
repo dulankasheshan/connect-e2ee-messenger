@@ -31,7 +31,7 @@ class DiscoverBlockedUsersLoaded extends DiscoverState {
 }
 
 class DiscoverActionSuccess extends DiscoverState {
-  final String message; // e.g., "User blocked successfully"
+  final String message;
 
   const DiscoverActionSuccess({required this.message});
 
@@ -46,4 +46,13 @@ class DiscoverError extends DiscoverState {
 
   @override
   List<Object> get props => [message];
+}
+
+class DiscoverPublicKeyLoaded extends DiscoverState {
+  final String publicKey;
+
+  const DiscoverPublicKeyLoaded({required this.publicKey});
+
+  @override
+  List<Object> get props => [publicKey];
 }

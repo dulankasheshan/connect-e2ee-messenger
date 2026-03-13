@@ -1,11 +1,14 @@
+import 'package:connect/features/chat/presentation/pages/chat_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// import 'package:connect/features/chat/presentation/pages/chat_screen.dart';
 import 'package:connect/features/discover/presentation/pages/discover_screen.dart';
 import 'package:connect/features/profile/presentation/pages/profile_screen.dart';
 import 'package:connect/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:connect/features/profile/presentation/bloc/profile_event.dart';
+
+import '../../../chat/presentation/bloc/chat_list/chat_list_bloc.dart';
+import '../../../chat/presentation/bloc/chat_list/chat_list_event.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,9 +22,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Tabs screens list
   final List<Widget> _pages = [
-    // const ChatScreen(),      // 0: Chat Feature
+    const ChatListScreen(),  // 0: Chat Feature
     const DiscoverScreen(),  // 1: Discover Feature
-    const ProfileScreen(),      // 2: Profile Feature
+    const ProfileScreen(),   // 2: Profile Feature
   ];
 
   @override
@@ -43,6 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentIndex = index;
           });
+
+          // Refresh the Chat List whenever the user navigates to the Chat tab
+          if (index == 0) {
+            context.read<ChatListBloc>().add(LoadRecentChatsRequested());
+          }
         },
         destinations: const [
           NavigationDestination(

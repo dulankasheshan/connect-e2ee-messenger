@@ -1,12 +1,12 @@
 import 'dart:io';
 
+import 'package:dartz/dartz.dart';
+
+import 'package:connect/core/errors/exceptions.dart';
 import 'package:connect/core/errors/failures.dart';
 import 'package:connect/features/profile/Data/datasources/profile_remote_datasource.dart';
 import 'package:connect/features/profile/domain/entities/user_profile_entity.dart';
 import 'package:connect/features/profile/domain/repositories/i_profile_repository.dart';
-import 'package:dartz/dartz.dart';
-
-import '../../../../core/errors/exceptions.dart';
 
 class ProfileRepositoryImpl extends IProfileRepository {
   final IProfileRemoteDataSource remoteDataSource;
@@ -54,6 +54,7 @@ class ProfileRepositoryImpl extends IProfileRepository {
     String? name,
     String? username,
     File? profilePic,
+    String? publicKey,
   }) async {
     try {
       return Right(
@@ -61,6 +62,7 @@ class ProfileRepositoryImpl extends IProfileRepository {
           name: name,
           username: username,
           profilePic: profilePic,
+          publicKey: publicKey,
         ),
       );
     } on ServerException catch (e) {

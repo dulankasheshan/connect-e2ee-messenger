@@ -34,8 +34,15 @@ class UnblockUserRequested extends DiscoverEvent {
   List<Object> get props => [userId];
 }
 
-//  Event to load the blocked users list
 class GetBlockedUsersRequested extends DiscoverEvent {}
 
-//  Used to clear the search results when the user clears the text field
 class ClearSearchRequested extends DiscoverEvent {}
+
+class GetPublicKeyRequested extends DiscoverEvent {
+  final String userId;
+
+  const GetPublicKeyRequested({required this.userId});
+
+  @override
+  List<Object> get props => [userId];
+}

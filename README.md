@@ -1,7 +1,12 @@
-# Connect Chat App — Flutter Frontend Documentation
+# 💬 Connect Chat — Secure Real-Time Messaging App
 
-A production-ready, real-time messaging application built with **Flutter**. This application strictly follows a **Feature-First Clean Architecture** and implements **End-to-End Encryption (E2EE)** to ensure maximum security and scalability.
+![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white)
+![Socket.io](https://img.shields.io/badge/Socket.io-black?style=for-the-badge&logo=socket.io&badgeColor=010101)
+![Clean Architecture](https://img.shields.io/badge/Architecture-Clean_Feature_First-success?style=for-the-badge)
+![Security](https://img.shields.io/badge/Security-RSA_E2EE-critical?style=for-the-badge)
 
+**Connect** is a production-ready, highly secure, real-time messaging application built with **Flutter**. It strictly implements **End-to-End Encryption (E2EE)** and is structured using a **Feature-First Clean Architecture** to ensure maximum scalability, maintainability, and privacy.
 ---
 
 ## Table of Contents

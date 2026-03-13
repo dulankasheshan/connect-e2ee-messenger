@@ -1,11 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:connect/core/utils/responsive_extension.dart';
 import 'package:connect/core/presentation/widgets/clean_background.dart';
 import 'package:connect/features/discover/presentation/bloc/discover_bloc.dart';
 import 'package:connect/features/discover/presentation/bloc/discover_event.dart';
 import 'package:connect/features/discover/presentation/bloc/discover_state.dart';
+import 'package:connect/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:connect/features/profile/presentation/bloc/profile_state.dart';
+import '../../../../service_locator.dart';
+import '../../../chat/domain/repositories/i_chat_repository.dart';
+import '../../../chat/presentation/bloc/chat_list/chat_list_bloc.dart';
+import '../../../chat/presentation/bloc/chat_list/chat_list_event.dart';
 import '../widgets/user_list_tile.dart';
 
 class DiscoverScreen extends StatefulWidget {
@@ -115,13 +122,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                         title: 'Find New Connections',
                         subtitle: 'Search for friends using their name or username.',
                       );
-                    }
-
-                    else if (state is DiscoverLoading) {
+                    } else if (state is DiscoverLoading) {
                       return _buildLoadingSkeleton(context);
-                    }
-
-                    else if (state is DiscoverSearchLoaded) {
+                    } else if (state is DiscoverSearchLoaded) {
                       final users = state.users;
 
                       if (users.isEmpty) {
@@ -145,17 +148,72 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                           indent: 76,
                         ),
                         itemBuilder: (context, index) {
+                          final targetUser = users[index];
+
                           return UserListTile(
-                            user: users[index],
+                            user: targetUser,
                             onTap: () {
-                              // TODO: Navigate to User Profile or direct to Chat Screen
+                              final profileState = context.read<ProfileBloc>().state;
+                              if (profileState is! ProfileLoaded) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Profile not loaded yet. Please try again later.')),
+                                );
+                                return;
+                              }
+
+                              final currentUser = profileState.profileEntity;
+
+                              // Capture both Blocs BEFORE the async gap/dialog
+                              final discoverBloc = context.read<DiscoverBloc>();
+                              final chatListBloc = context.read<ChatListBloc>();
+
+                              discoverBloc.add(GetPublicKeyRequested(userId: targetUser.id));
+
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (dialogContext) {
+                                  return BlocProvider.value(
+                                    value: discoverBloc,
+                                    child: BlocListener<DiscoverBloc, DiscoverState>(
+                                      listener: (innerContext, discoverState) {
+                                        if (discoverState is DiscoverPublicKeyLoaded) {
+                                          Navigator.of(dialogContext).pop();
+
+                                          sl<IChatRepository>().saveCachedUser(
+                                            id: targetUser.id,
+                                            name: targetUser.name,
+                                            username: targetUser.username,
+                                            profilePicUrl: targetUser.profilePicUrl,
+                                          );
+
+                                          context.push('/chat', extra: {
+                                            'currentUser': currentUser,
+                                            'receiverUser': targetUser,
+                                            'receiverPublicKey': discoverState.publicKey,
+                                          }).then((_) {
+                                            // Use the captured reference here safely!
+                                            chatListBloc.add(LoadRecentChatsRequested());
+                                          });
+                                        } else if (discoverState is DiscoverError) {
+                                          Navigator.of(dialogContext).pop();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text(discoverState.message)),
+                                          );
+                                        }
+                                      },
+                                      child: const Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
                             },
                           );
                         },
                       );
-                    }
-
-                    else if (state is DiscoverError) {
+                    } else if (state is DiscoverError) {
                       return _buildEmptyState(
                         context,
                         icon: Icons.error_outline_rounded,
