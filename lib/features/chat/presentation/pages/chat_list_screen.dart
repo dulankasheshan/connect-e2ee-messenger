@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -13,8 +14,11 @@ import 'package:connect/features/discover/presentation/bloc/discover_bloc.dart';
 import 'package:connect/features/discover/presentation/bloc/discover_event.dart';
 import 'package:connect/features/discover/presentation/bloc/discover_state.dart';
 import 'package:connect/features/discover/domain/entities/search_user_entity.dart';
+
 import '../../../../service_locator.dart';
 import '../../../chat/domain/repositories/i_chat_repository.dart';
+import '../../domain/usecases/receive_messages_stream_usecase.dart';
+import '../../domain/usecases/receive_message_status_stream_usecase.dart';
 import '../bloc/chat_bloc.dart';
 import '../bloc/chat_event.dart';
 
@@ -26,15 +30,34 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
+  StreamSubscription? _incomingMessageSub;
+  StreamSubscription? _statusUpdateSub;
+
   @override
   void initState() {
     super.initState();
     context.read<ChatBloc>().add(ConnectSocketRequested());
     context.read<ChatListBloc>().add(LoadRecentChatsRequested());
+
+    // Refresh list on incoming messages
+    _incomingMessageSub = sl<ReceiveMessagesStreamUseCase>().call().listen((_) {
+      if (mounted) {
+        context.read<ChatListBloc>().add(LoadRecentChatsRequested());
+      }
+    });
+
+    // Refresh list on message status updates
+    _statusUpdateSub = sl<ReceiveMessageStatusStreamUseCase>().call().listen((_) {
+      if (mounted) {
+        context.read<ChatListBloc>().add(LoadRecentChatsRequested());
+      }
+    });
   }
 
   @override
   void dispose() {
+    _incomingMessageSub?.cancel();
+    _statusUpdateSub?.cancel();
     super.dispose();
   }
 
@@ -99,6 +122,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         );
                       }
 
+                      final isUnreadIncoming = message.status != 'read' && message.senderId != myId;
+
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         leading: CircleAvatar(
@@ -117,7 +142,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           message.decryptedText,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: isUnreadIncoming ? FontWeight.bold : FontWeight.normal,
+                          ),
                         ),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -125,10 +153,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           children: [
                             Text(
                               _formatTime(message.createdAt),
-                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isUnreadIncoming
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurfaceVariant,
+                                fontWeight: isUnreadIncoming ? FontWeight.bold : FontWeight.normal,
+                              ),
                             ),
                             const SizedBox(height: 4),
-                            if (message.status == 'unread')
+                            if (isUnreadIncoming)
                               Container(
                                 width: 10,
                                 height: 10,
@@ -148,7 +182,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             name: displayName,
                             username: username,
                             profilePicUrl: avatarUrl,
-                            isOnline: false, // Default initial state. Socket will update this immediately.
+                            isOnline: false,
                             lastSeenVisibility: true,
                           );
 
@@ -170,6 +204,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                         'receiverUser': targetUser,
                                         'receiverPublicKey': discoverState.publicKey,
                                       }).then((_) {
+                                        // Refresh list after returning from chat
                                         chatListBloc.add(LoadRecentChatsRequested());
                                       });
                                     } else if (discoverState is DiscoverError) {

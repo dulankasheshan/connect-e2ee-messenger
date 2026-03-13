@@ -20,6 +20,7 @@ class ChatLoaded extends ChatState {
   final bool isOnline;
   final DateTime? lastSeen;
   final String? editingMessageId;
+  final MessageEntity? replyingToMessage;
 
   const ChatLoaded({
     required this.messages,
@@ -27,6 +28,7 @@ class ChatLoaded extends ChatState {
     this.isOnline = false,
     this.lastSeen,
     this.editingMessageId,
+    this.replyingToMessage,
   });
 
   ChatLoaded copyWith({
@@ -36,6 +38,8 @@ class ChatLoaded extends ChatState {
     DateTime? lastSeen,
     String? editingMessageId,
     bool clearEditing = false,
+    MessageEntity? replyingToMessage,
+    bool clearReplyingTo = false,
   }) {
     return ChatLoaded(
       messages: messages ?? this.messages,
@@ -43,11 +47,19 @@ class ChatLoaded extends ChatState {
       isOnline: isOnline ?? this.isOnline,
       lastSeen: lastSeen ?? this.lastSeen,
       editingMessageId: clearEditing ? null : (editingMessageId ?? this.editingMessageId),
+      replyingToMessage: clearReplyingTo ? null : (replyingToMessage ?? this.replyingToMessage),
     );
   }
 
   @override
-  List<Object?> get props => [messages, isTyping, isOnline, lastSeen, editingMessageId];
+  List<Object?> get props => [
+    messages,
+    isTyping,
+    isOnline,
+    lastSeen,
+    editingMessageId,
+    replyingToMessage,
+  ];
 }
 
 class ChatError extends ChatState {

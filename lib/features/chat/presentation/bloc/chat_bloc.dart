@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:connect/features/chat/domain/entities/message_entity.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../domain/usecases/clear_all_chat_history_usecase.dart';
 import '../../domain/usecases/connect_socket_usecase.dart';
@@ -19,6 +20,7 @@ import '../../domain/usecases/receive_online_status_stream_usecase.dart';
 import '../../domain/usecases/edit_message_usecase.dart';
 import '../../domain/usecases/delete_message_usecase.dart';
 
+import '../../domain/usecases/upload_media_usecase.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
 
@@ -39,6 +41,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final ReceiveEditedMessageStreamUseCase receiveEditedMessageStreamUseCase;
   final ReceiveDeletedMessageStreamUseCase receiveDeletedMessageStreamUseCase;
   final ClearAllChatHistoryUseCase clearAllChatHistoryUseCase;
+  final UploadMediaUseCase uploadMediaUseCase;
 
   StreamSubscription? _messageSubscription;
   StreamSubscription? _statusSubscription;
@@ -64,6 +67,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     required this.receiveEditedMessageStreamUseCase,
     required this.receiveDeletedMessageStreamUseCase,
     required this.clearAllChatHistoryUseCase,
+    required this.uploadMediaUseCase,
   }) : super(ChatInitial()) {
 
     on<ConnectSocketRequested>(_onConnectSocket);
@@ -83,6 +87,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<EditedMessageReceived>(_onEditedMessageReceived);
     on<DeletedMessageReceived>(_onDeletedMessageReceived);
     on<ClearAllChatHistoryRequested>(_onClearAllChatHistory);
+    on<ReplyToMessageSelected>(_onReplyToMessageSelected);
+    on<ReplyCanceled>(_onReplyCanceled);
+    on<SendMediaMessageRequested>(_onSendMediaMessage);
   }
 
   Future<void> _onConnectSocket(ConnectSocketRequested event, Emitter<ChatState> emit) async {
@@ -141,7 +148,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (state is ChatLoaded) {
       final currentState = state as ChatLoaded;
       final updatedMessages = List<MessageEntity>.from(currentState.messages)..insert(0, event.message);
-      emit(currentState.copyWith(messages: updatedMessages));
+
+      // Clear the replyingToMessage state after sending
+      emit(currentState.copyWith(
+        messages: updatedMessages,
+        clearReplyingTo: true,
+      ));
     }
 
     await sendMessageUseCase(event.message, event.receiverPublicKey);
@@ -230,7 +242,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final updatedMessages = currentState.messages.map((msg) {
         if (msg.id == realId || msg.clientTempId == tempId) {
           return MessageEntity(
-            id: realId ?? msg.id, // 👈 Update the message ID to the REAL ID!
+            id: realId ?? msg.id, // Update the message ID to the REAL ID!
             senderId: msg.senderId,
             receiverId: msg.receiverId,
             decryptedText: msg.decryptedText,
@@ -338,6 +350,69 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       // Clear the local database
       await clearAllChatHistoryUseCase(event.chatUserId);
+    }
+  }
+
+
+
+  void _onReplyToMessageSelected(ReplyToMessageSelected event, Emitter<ChatState> emit) {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      // Set the selected message and clear any editing state
+      emit(currentState.copyWith(
+        replyingToMessage: event.message,
+        clearEditing: true,
+      ));
+    }
+  }
+
+  void _onReplyCanceled(ReplyCanceled event, Emitter<ChatState> emit) {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      emit(currentState.copyWith(clearReplyingTo: true));
+    }
+  }
+
+
+  Future<void> _onSendMediaMessage(SendMediaMessageRequested event, Emitter<ChatState> emit) async {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+
+      // Upload the media file to the server
+      final uploadResult = await uploadMediaUseCase(event.mediaFile);
+
+      await uploadResult.fold(
+              (failure) async {
+            // You might want to handle failures here (e.g., emit an error state)
+            print('Media upload failed: ${failure.message}');
+          },
+              (mediaData) async {
+            // On success, create the message with the returned URL and MIME type
+            final tempId = const Uuid().v4();
+            final message = MessageEntity(
+              id: tempId,
+              senderId: event.senderId,
+              receiverId: event.receiverId,
+              decryptedText: event.caption ?? '📷 Photo',
+              status: 'sent',
+              createdAt: DateTime.now(),
+              clientTempId: tempId,
+              mediaUrl: mediaData['url'],
+              mediaType: mediaData['mimeType'],
+              replyToMsgId: event.replyToMsgId,
+            );
+
+            // Optimistically update the UI
+            final updatedMessages = List<MessageEntity>.from(currentState.messages)..insert(0, message);
+            emit(currentState.copyWith(
+              messages: updatedMessages,
+              clearReplyingTo: true,
+            ));
+
+            // Send the message payload via Socket
+            await sendMessageUseCase(message, event.receiverPublicKey);
+          }
+      );
     }
   }
 

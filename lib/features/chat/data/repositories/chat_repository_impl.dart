@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:connect/core/crypto/crypto_service.dart';
 import 'package:connect/core/errors/exceptions.dart';
 import 'package:connect/core/errors/failures.dart';
@@ -295,6 +297,18 @@ class ChatRepositoryImpl implements IChatRepository {
       return Right(entities);
     } catch (e) {
       return const Left(ServerFailure('Failed to load recent chats.'));
+    }
+  }
+
+  @override
+  Future<Either<Failures, Map<String, dynamic>>> uploadMedia(File file) async {
+    try {
+      final mediaData = await remoteDatasource.uploadMedia(file);
+      return Right(mediaData);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return const Left(ServerFailure('An unexpected error occurred during upload.'));
     }
   }
 

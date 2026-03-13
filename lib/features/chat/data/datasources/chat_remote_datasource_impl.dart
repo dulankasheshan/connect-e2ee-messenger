@@ -248,6 +248,31 @@ class ChatRemoteDatasourceImpl implements IChatRemoteDatasource {
   }
 
   @override
+  Future<Map<String, dynamic>> uploadMedia(File file) async {
+    try {
+      String fileName = file.path.split('/').last;
+
+      FormData formData = FormData.fromMap({
+        "media": await MultipartFile.fromFile(file.path, filename: fileName),
+      });
+
+      final response = await apiClient.dio.post(
+        ApiEndpoints.mediaShare,
+        data: formData,
+      );
+
+      if (response.data['success'] == true) {
+        // Returns { "url": "...", "mimeType": "...", ... }
+        return response.data['data'];
+      } else {
+        throw ServerException(response.data['message'] ?? 'Media upload failed');
+      }
+    } catch (e) {
+      throw ServerException('Failed to upload media: $e');
+    }
+  }
+
+  @override
   Stream<MessageModel> receiveMessagesStream() => _messageStreamController.stream;
 
   @override

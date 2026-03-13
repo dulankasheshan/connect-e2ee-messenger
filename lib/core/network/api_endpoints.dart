@@ -30,4 +30,6 @@ class ApiEndpoints {
       : (dotenv.env['SOCKET_URL'] ?? 'https://10.0.2.2:5443');
   static const String getOfflineMessage = '/messages/sync';
   static const String getChatHistory = '/messages/history/';
+  static const String mediaShare = '/media/upload';
+
 }

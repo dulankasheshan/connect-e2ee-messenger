@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dartz/dartz.dart';
 import 'package:connect/core/errors/failures.dart';
 import '../entities/message_entity.dart';
@@ -20,6 +22,8 @@ abstract class IChatRepository {
   Future<Either<Failures, List<MessageEntity>>> syncOfflineMessages();
   Future<Either<Failures, List<MessageEntity>>> getChatHistory(String userId, {int limit = 20, int offset = 0});
   Future<Either<Failures, List<MessageEntity>>> getRecentChats();
+
+  Future<Either<Failures, Map<String, dynamic>>> uploadMedia(File file);
 
   // --- Streams (Listening to Server) ---
   Stream<MessageEntity> receiveMessagesStream();

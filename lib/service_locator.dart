@@ -52,6 +52,7 @@ import 'features/chat/domain/usecases/send_message_usecase.dart';
 import 'features/chat/domain/usecases/send_read_receipt_usecase.dart';
 import 'features/chat/domain/usecases/send_typing_status_usecase.dart';
 import 'features/chat/domain/usecases/sync_offline_messages_usecase.dart';
+import 'features/chat/domain/usecases/upload_media_usecase.dart';
 import 'features/chat/presentation/bloc/chat_bloc.dart';
 import 'features/chat/presentation/bloc/chat_list/chat_list_bloc.dart';
 import 'features/discover/presentation/bloc/discover_bloc.dart';
@@ -195,6 +196,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => ReceiveEditedMessageStreamUseCase(sl()));
   sl.registerLazySingleton(() => ReceiveDeletedMessageStreamUseCase(sl()));
   sl.registerLazySingleton(() => ClearAllChatHistoryUseCase(sl()));
+  sl.registerLazySingleton(() => UploadMediaUseCase(sl()));
 
   // ===========================================================================
   // 5. BLOCS
@@ -256,6 +258,7 @@ Future<void> initDependencies() async {
       receiveEditedMessageStreamUseCase: sl(),
       receiveDeletedMessageStreamUseCase: sl(),
       clearAllChatHistoryUseCase: sl(),
+      uploadMediaUseCase: sl(),
     ),
   );
 

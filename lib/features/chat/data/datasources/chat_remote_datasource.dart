@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:connect/features/chat/data/models/message_model.dart';
 
 abstract class IChatRemoteDatasource {
@@ -12,6 +14,8 @@ abstract class IChatRemoteDatasource {
 
   Future<void> editMessage(String messageId, String newEncryptedText);
   Future<void> deleteMessage(String messageId);
+
+  Future<Map<String, dynamic>> uploadMedia(File file);
 
   // --- REST Actions (History & Sync) ---
   Future<List<MessageModel>> syncOfflineMessages();

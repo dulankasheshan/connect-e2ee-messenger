@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:equatable/equatable.dart';
 import 'package:connect/features/chat/domain/entities/message_entity.dart';
 
@@ -136,4 +138,36 @@ class ClearAllChatHistoryRequested extends ChatEvent {
   const ClearAllChatHistoryRequested({required this.chatUserId});
   @override
   List<Object> get props => [chatUserId];
+}
+
+class ReplyToMessageSelected extends ChatEvent {
+  final MessageEntity message;
+
+  const ReplyToMessageSelected({required this.message});
+
+  @override
+  List<Object> get props => [message];
+}
+
+class ReplyCanceled extends ChatEvent {}
+
+class SendMediaMessageRequested extends ChatEvent {
+  final File mediaFile;
+  final String? caption;
+  final String receiverPublicKey;
+  final String receiverId;
+  final String senderId;
+  final String? replyToMsgId;
+
+  const SendMediaMessageRequested({
+    required this.mediaFile,
+    this.caption,
+    required this.receiverPublicKey,
+    required this.receiverId,
+    required this.senderId,
+    this.replyToMsgId,
+  });
+
+  @override
+  List<Object?> get props => [mediaFile, caption, receiverPublicKey, receiverId, senderId, replyToMsgId];
 }
